@@ -1,0 +1,358 @@
+# Resomnium's own operational cell - a live reference implementation
+# This is how Resomnium actually operates: 1 human + 6 AI agents
+# organized using the Cell Framework with all 5 steward roles.
+
+id: resomnium-ops
+name: Resomnium Operations Cell
+description: >
+  Primary operational cell for Resomnium d.o.o. - an AI-native
+  organizational design consultancy. Demonstrates the Cell Framework
+  in production use.
+mandate: >
+  Deliver AI-native organizational design consulting while continuously
+  improving the Cell Framework methodology through live operational data.
+
+config:
+  max_participants: 10
+  require_human_oversight: true
+  audit_all_actions: true
+  default_escalation_timeout: 7200
+  allow_ai_to_ai_handoffs: true
+  require_scope_boundaries: true
+
+roles:
+  - name: Director
+    steward_role: clarity
+    participant_type: human
+    description: >
+      Strategic direction, client relationships, final decision authority.
+      Sets priorities, approves deliverables, owns client relationships.
+    decision_rights: full
+    scope:
+      allowed_actions:
+        - set_strategy
+        - approve_deliverable
+        - engage_client
+        - allocate_resources
+        - review_output
+        - override_decision
+      forbidden_actions: []
+      resource_limits: {}
+    kpis:
+      - client_satisfaction_score
+      - revenue_per_engagement
+      - methodology_improvements_per_quarter
+
+  - name: Intelligence Analyst
+    steward_role: narrative
+    participant_type: ai
+    description: >
+      Gathers market intelligence, monitors industry trends, synthesizes
+      research into actionable briefings for client engagements.
+    decision_rights: conditional
+    scope:
+      allowed_actions:
+        - search_web
+        - analyze_data
+        - generate_report
+        - summarize_research
+      forbidden_actions:
+        - contact_client
+        - publish_content
+        - make_purchase
+        - access_financial_data
+      resource_limits:
+        api_calls_per_day: 1000
+        report_length_max_words: 5000
+      requires_approval_for:
+        - publish_content
+    accountability_to: Director
+    escalation_rules:
+      - trigger: confidence_low
+        target_role: Director
+        threshold: 0.6
+        message_template: >
+          Low confidence on research finding: {description}.
+          Requesting human review.
+      - trigger: scope_boundary
+        target_role: Director
+    kpis:
+      - research_accuracy_score
+      - briefing_actionability_rating
+      - trend_identification_lead_time
+
+  - name: Content Strategist
+    participant_type: ai
+    description: >
+      Plans content calendar, drafts essay outlines, manages distribution
+      strategy for Substack, LinkedIn, and X.
+    decision_rights: advisory
+    scope:
+      allowed_actions:
+        - draft_outline
+        - suggest_topic
+        - analyze_engagement
+        - plan_calendar
+      forbidden_actions:
+        - publish_content
+        - contact_client
+        - make_purchase
+      requires_approval_for:
+        - publish_content
+        - change_calendar
+    accountability_to: Director
+    escalation_rules:
+      - trigger: scope_boundary
+        target_role: Director
+    kpis:
+      - content_pipeline_velocity
+      - topic_relevance_score
+
+  - name: Lead Generation Agent
+    participant_type: ai
+    description: >
+      Scans funding databases, identifies potential clients, scores leads,
+      and prepares outreach briefs for Director review.
+    decision_rights: conditional
+    scope:
+      allowed_actions:
+        - search_leads
+        - score_leads
+        - generate_brief
+        - track_pipeline
+      forbidden_actions:
+        - contact_lead
+        - send_email
+        - make_commitment
+        - access_financial_data
+      resource_limits:
+        leads_per_cycle: 20
+      requires_approval_for:
+        - contact_lead
+    accountability_to: Director
+    escalation_rules:
+      - trigger: confidence_low
+        target_role: Director
+        threshold: 0.7
+    kpis:
+      - qualified_leads_per_cycle
+      - lead_score_accuracy
+
+  - name: Operations Coordinator
+    steward_role: execution
+    participant_type: ai
+    description: >
+      Coordinates task flows between agents, tracks deadlines, manages
+      the operational cadence of the cell.
+    decision_rights: conditional
+    scope:
+      allowed_actions:
+        - assign_task
+        - track_progress
+        - send_reminder
+        - generate_status_report
+      forbidden_actions:
+        - approve_deliverable
+        - engage_client
+        - make_purchase
+        - override_decision
+      requires_approval_for:
+        - reassign_task
+        - change_deadline
+    accountability_to: Director
+    escalation_rules:
+      - trigger: timeout
+        target_role: Director
+        timeout_seconds: 86400
+      - trigger: conflict
+        target_role: Director
+    kpis:
+      - task_completion_rate
+      - on_time_delivery_rate
+
+  - name: Quality Reviewer
+    steward_role: governance
+    participant_type: ai
+    description: >
+      Reviews all outputs for quality, consistency, and alignment with
+      Resomnium standards before delivery or publication.
+    decision_rights: advisory
+    scope:
+      allowed_actions:
+        - review_output
+        - flag_issue
+        - suggest_improvement
+        - check_compliance
+      forbidden_actions:
+        - approve_deliverable
+        - contact_client
+        - publish_content
+    accountability_to: Director
+    escalation_rules:
+      - trigger: scope_boundary
+        target_role: Director
+      - trigger: error
+        target_role: Director
+    kpis:
+      - review_thoroughness_score
+      - false_positive_rate
+
+  - name: Relationship Manager
+    steward_role: access
+    participant_type: ai
+    description: >
+      Tracks client and partner relationships, prepares meeting briefs,
+      manages CRM data, and identifies networking opportunities.
+    decision_rights: advisory
+    scope:
+      allowed_actions:
+        - update_crm
+        - prepare_brief
+        - suggest_connection
+        - track_relationship
+      forbidden_actions:
+        - contact_client
+        - send_email
+        - make_commitment
+        - share_confidential_data
+      requires_approval_for:
+        - suggest_introduction
+    accountability_to: Director
+    escalation_rules:
+      - trigger: scope_boundary
+        target_role: Director
+    kpis:
+      - relationship_health_score
+      - meeting_prep_quality
+
+participants:
+  - id: filip
+    name: Filip Blagojević
+    participant_type: human
+    role: Director
+    capabilities:
+      - strategy
+      - client_engagement
+      - technical_architecture
+      - content_writing
+      - decision_making
+    availability: business_hours
+    contact_protocol: email:filip@resomnium.com
+
+  - id: vox
+    name: Vox
+    participant_type: ai
+    role: Intelligence Analyst
+    capabilities:
+      - web_research
+      - data_analysis
+      - report_generation
+      - trend_analysis
+    availability: always
+    contact_protocol: api
+
+  - id: lester
+    name: Lester
+    participant_type: ai
+    role: Content Strategist
+    capabilities:
+      - content_planning
+      - copywriting
+      - engagement_analysis
+      - distribution_strategy
+    availability: always
+    contact_protocol: api
+
+  - id: scout
+    name: Scout
+    participant_type: ai
+    role: Lead Generation Agent
+    capabilities:
+      - lead_research
+      - lead_scoring
+      - outreach_drafting
+      - pipeline_tracking
+    availability: always
+    contact_protocol: api
+
+  - id: zach
+    name: Zach
+    participant_type: ai
+    role: Operations Coordinator
+    capabilities:
+      - task_management
+      - scheduling
+      - status_reporting
+      - coordination
+    availability: always
+    contact_protocol: a2a:https://resomnium.com/.well-known/agent-card.json
+
+  - id: corra
+    name: Corra
+    participant_type: ai
+    role: Quality Reviewer
+    capabilities:
+      - quality_review
+      - compliance_check
+      - style_consistency
+      - error_detection
+    availability: always
+    contact_protocol: api
+
+  - id: q
+    name: Q
+    participant_type: ai
+    role: Relationship Manager
+    capabilities:
+      - crm_management
+      - meeting_preparation
+      - network_analysis
+      - relationship_tracking
+    availability: always
+    contact_protocol: api
+
+handoff_protocols:
+  - from_role: Intelligence Analyst
+    to_role: Director
+    trigger: research_complete
+    required_context:
+      - research_brief
+      - confidence_score
+      - data_sources
+    validation: Director reviews and acknowledges receipt
+
+  - from_role: Lead Generation Agent
+    to_role: Director
+    trigger: lead_qualified
+    required_context:
+      - lead_brief
+      - qualification_score
+      - recommended_approach
+    validation: Director approves or rejects outreach
+
+  - from_role: Content Strategist
+    to_role: Quality Reviewer
+    trigger: draft_ready
+    required_context:
+      - draft_content
+      - target_audience
+      - distribution_channel
+    validation: Quality review passes all checks
+
+  - from_role: Quality Reviewer
+    to_role: Director
+    trigger: review_complete
+    required_context:
+      - reviewed_content
+      - quality_score
+      - issues_found
+    validation: Director gives final approval
+
+  - from_role: Operations Coordinator
+    to_role: Director
+    trigger: escalation_needed
+    required_context:
+      - blocked_task
+      - reason
+      - suggested_resolution
+    validation: Director resolves or delegates
