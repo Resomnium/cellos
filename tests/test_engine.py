@@ -24,7 +24,7 @@ def make_test_cell() -> Cell:
         name="Test Cell",
         roles=[
             Role(
-                name="Boss",
+                name="Clarity Steward",
                 steward_role=StewardRole.CLARITY,
                 participant_type=ParticipantType.HUMAN,
                 decision_rights=DecisionRight.FULL,
@@ -32,7 +32,6 @@ def make_test_cell() -> Cell:
             ),
             Role(
                 name="Worker",
-                steward_role=StewardRole.EXECUTION,
                 participant_type=ParticipantType.AI,
                 decision_rights=DecisionRight.CONDITIONAL,
                 scope=ScopeDefinition(
@@ -40,15 +39,15 @@ def make_test_cell() -> Cell:
                     forbidden_actions=["delete", "publish", "purchase"],
                     requires_approval_for=["external_communication"],
                 ),
-                accountability_to="Boss",
+                accountability_to="Clarity Steward",
                 escalation_rules=[
                     EscalationRule(
                         trigger=EscalationTrigger.SCOPE_BOUNDARY,
-                        target_role="Boss",
+                        target_role="Clarity Steward",
                     ),
                     EscalationRule(
                         trigger=EscalationTrigger.CONFIDENCE_LOW,
-                        target_role="Boss",
+                        target_role="Clarity Steward",
                         threshold=0.6,
                     ),
                 ],
@@ -59,7 +58,7 @@ def make_test_cell() -> Cell:
                 id="human-1",
                 name="Alice",
                 participant_type=ParticipantType.HUMAN,
-                role="Boss",
+                role="Clarity Steward",
                 capabilities=["strategy", "approval"],
                 availability="business_hours",
             ),

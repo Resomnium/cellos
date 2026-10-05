@@ -1,36 +1,90 @@
-# Minimal CellOS cell definition — use this as a starting template.
-# A small product team with 1 human lead and 2 AI assistants.
+# Minimal CellOS cell definition - use this as a starting template.
+# A small product team: five human stewards, flat, no boss.
+# Each AI agent works beneath the steward who owns its function.
 
 id: starter-cell
 name: Product Team
-description: A minimal cell for a product team with human leadership and AI support.
+description: A minimal cell for a product team. Five human stewards, two AI agents beneath them.
 mandate: Ship quality product features with clear human-AI coordination.
 
 config:
   max_participants: 7
   require_human_oversight: true
+  require_human_stewards: true
   audit_all_actions: true
 
 roles:
-  - name: Product Lead
+  - name: Clarity Steward
     steward_role: clarity
     participant_type: human
-    description: Sets priorities, approves work, makes final decisions.
+    description: Owns the question. Sets direction and scope, decides what done means.
     decision_rights: full
     scope:
       allowed_actions:
         - set_priority
-        - approve_work
+        - define_scope
         - review_output
-        - assign_task
     kpis:
-      - feature_completion_rate
+      - roadmap_focus
       - decision_turnaround_time
 
-  - name: Research Assistant
+  - name: Execution Steward
+    steward_role: execution
+    participant_type: human
+    description: Owns the doing. Delivery, quality, tooling, and what gets automated.
+    decision_rights: full
+    scope:
+      allowed_actions:
+        - assign_task
+        - approve_work
+        - review_output
+    kpis:
+      - feature_completion_rate
+      - defect_escape_rate
+
+  - name: Narrative Steward
     steward_role: narrative
+    participant_type: human
+    description: Owns the story. Release notes, docs, and how the product is described.
+    decision_rights: full
+    scope:
+      allowed_actions:
+        - publish
+        - approve_copy
+    kpis:
+      - docs_freshness
+      - release_note_reach
+
+  - name: Access Steward
+    steward_role: access
+    participant_type: human
+    description: Owns the doors. Customers, partners, and the conversations that need a human.
+    decision_rights: full
+    scope:
+      allowed_actions:
+        - contact_external
+        - make_commitment
+    kpis:
+      - customer_interviews_per_month
+      - partner_response_time
+
+  - name: Integrity Steward
+    steward_role: integrity
+    participant_type: human
+    description: Owns trust. Governance, incentives, conflict and accountability.
+    decision_rights: full
+    scope:
+      allowed_actions:
+        - audit
+        - resolve_conflict
+        - approve_spend
+    kpis:
+      - open_conflicts
+      - audit_findings_closed
+
+  - name: Research Assistant
     participant_type: ai
-    description: Researches competitors, analyzes data, drafts reports.
+    description: Researches competitors, analyzes data, drafts reports for the Clarity Steward.
     decision_rights: conditional
     scope:
       allowed_actions:
@@ -44,21 +98,20 @@ roles:
         - make_purchase
       requires_approval_for:
         - share_externally
-    accountability_to: Product Lead
+    accountability_to: Clarity Steward
     escalation_rules:
       - trigger: confidence_low
-        target_role: Product Lead
+        target_role: Clarity Steward
         threshold: 0.7
       - trigger: scope_boundary
-        target_role: Product Lead
+        target_role: Clarity Steward
     kpis:
       - research_accuracy
       - report_quality
 
   - name: Task Executor
-    steward_role: execution
     participant_type: ai
-    description: Executes defined tasks, tracks progress, reports status.
+    description: Executes defined tasks, tracks progress, reports status to the Execution Steward.
     decision_rights: conditional
     scope:
       allowed_actions:
@@ -70,26 +123,65 @@ roles:
         - approve_work
         - set_priority
         - contact_external
-    accountability_to: Product Lead
+    accountability_to: Execution Steward
     escalation_rules:
       - trigger: error
-        target_role: Product Lead
+        target_role: Execution Steward
       - trigger: timeout
-        target_role: Product Lead
+        target_role: Execution Steward
         timeout_seconds: 3600
     kpis:
       - task_completion_rate
       - on_time_delivery
 
 participants:
-  - id: lead-1
-    name: Team Lead
+  - id: clarity-1
+    name: Clarity Steward
     participant_type: human
-    role: Product Lead
+    role: Clarity Steward
     capabilities:
       - strategy
       - decision_making
-      - stakeholder_management
+    availability: business_hours
+    contact_protocol: email
+
+  - id: execution-1
+    name: Execution Steward
+    participant_type: human
+    role: Execution Steward
+    capabilities:
+      - delivery
+      - code_review
+    availability: business_hours
+    contact_protocol: email
+
+  - id: narrative-1
+    name: Narrative Steward
+    participant_type: human
+    role: Narrative Steward
+    capabilities:
+      - writing
+      - documentation
+    availability: business_hours
+    contact_protocol: email
+
+  - id: access-1
+    name: Access Steward
+    participant_type: human
+    role: Access Steward
+    capabilities:
+      - customer_relationships
+      - partnerships
+    availability: business_hours
+    contact_protocol: email
+
+  - id: integrity-1
+    name: Integrity Steward
+    participant_type: human
+    role: Integrity Steward
+    capabilities:
+      - audit
+      - mediation
     availability: business_hours
     contact_protocol: email
 
@@ -117,19 +209,27 @@ participants:
 
 handoff_protocols:
   - from_role: Research Assistant
-    to_role: Product Lead
+    to_role: Clarity Steward
     trigger: research_complete
     required_context:
       - research_findings
       - confidence_score
       - data_sources
-    validation: Product Lead acknowledges
+    validation: Clarity Steward acknowledges
 
   - from_role: Task Executor
-    to_role: Product Lead
+    to_role: Execution Steward
     trigger: task_complete_or_blocked
     required_context:
       - task_result
       - completion_status
       - blockers_if_any
-    validation: Product Lead reviews output
+    validation: Execution Steward reviews output
+
+  - from_role: Clarity Steward
+    to_role: Execution Steward
+    trigger: scope_agreed
+    required_context:
+      - scope
+      - definition_of_done
+    validation: Execution Steward accepts the scope as a peer

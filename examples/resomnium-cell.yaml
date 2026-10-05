@@ -1,54 +1,129 @@
-# Resomnium's own operational cell - a live reference implementation
-# This is how Resomnium actually operates: 1 human + 6 AI agents
-# organized using the Cell Framework with all 5 steward roles.
+# A reference cell in the shape Resomnium designs: five human stewards in a
+# flat ring, no boss node, each steward running AI agents beneath them.
+#
+# Illustrative. This is not a record of how Resomnium operates today, and the
+# five human seats are role titles, not named people. The one real agent here
+# is Zach, Resomnium's public A2A inbox: it accepts a message, emails it to a
+# human, and returns a receipt that says exactly that.
 
-id: resomnium-ops
-name: Resomnium Operations Cell
+id: resomnium-reference
+name: Resomnium Reference Cell
 description: >
-  Primary operational cell for Resomnium d.o.o. - an AI-native
-  organizational design consultancy. Demonstrates the Cell Framework
-  in production use.
+  A reference cell for an organizational design studio. Five human stewards
+  own the five functions as peers. AI agents work beneath the steward whose
+  function they serve, and every agent's chain ends at that human.
 mandate: >
-  Deliver AI-native organizational design consulting while continuously
-  improving the Cell Framework methodology through live operational data.
+  Design organizations where humans and AI agents work together, then build
+  what they run on, and keep improving the Cell Framework from how cells
+  actually run.
 
 config:
-  max_participants: 10
+  max_participants: 12
   require_human_oversight: true
+  require_human_stewards: true
   audit_all_actions: true
   default_escalation_timeout: 7200
   allow_ai_to_ai_handoffs: true
   require_scope_boundaries: true
 
 roles:
-  - name: Director
+  # --- The five human stewards (peers, no reporting lines between them) ---
+
+  - name: Clarity Steward
     steward_role: clarity
     participant_type: human
     description: >
-      Strategic direction, client relationships, final decision authority.
-      Sets priorities, approves deliverables, owns client relationships.
+      Owns the question. Direction, scope, and what done means. Keeps the
+      strategy from drifting as it meets reality.
     decision_rights: full
     scope:
       allowed_actions:
-        - set_strategy
-        - approve_deliverable
-        - engage_client
-        - allocate_resources
+        - set_direction
+        - define_scope
+        - approve_research
         - review_output
-        - override_decision
-      forbidden_actions: []
-      resource_limits: {}
     kpis:
-      - client_satisfaction_score
-      - revenue_per_engagement
+      - decisions_reversed_per_quarter
       - methodology_improvements_per_quarter
 
-  - name: Intelligence Analyst
+  - name: Execution Steward
+    steward_role: execution
+    participant_type: human
+    description: >
+      Owns the doing. Delivery, quality, tooling, and the call on what gets
+      automated and what stays human.
+    decision_rights: full
+    scope:
+      allowed_actions:
+        - plan_delivery
+        - assign_task
+        - approve_deliverable
+        - decide_automation
+        - review_output
+    kpis:
+      - on_time_delivery_rate
+      - rework_rate
+
+  - name: Narrative Steward
     steward_role: narrative
+    participant_type: human
+    description: >
+      Owns the story. What is said, where, and in whose voice. Decides what
+      goes out.
+    decision_rights: full
+    scope:
+      allowed_actions:
+        - approve_content
+        - publish_content
+        - set_voice
+        - review_output
+    kpis:
+      - essays_published_per_month
+      - reader_reply_rate
+
+  - name: Access Steward
+    steward_role: access
+    participant_type: human
+    description: >
+      Owns the doors. Clients, partners, capital: the conversations that need
+      a human with real authority across the table.
+    decision_rights: full
+    scope:
+      allowed_actions:
+        - engage_client
+        - contact_lead
+        - reply_to_inquiry
+        - make_commitment
+        - sign_partnership
+    kpis:
+      - client_satisfaction_score
+      - inquiry_reply_time
+
+  - name: Integrity Steward
+    steward_role: integrity
+    participant_type: human
+    description: >
+      Owns trust. Governance, incentives, conflict and accountability. The
+      immune system of the cell.
+    decision_rights: full
+    scope:
+      allowed_actions:
+        - audit
+        - set_incentives
+        - resolve_conflict
+        - approve_spend
+        - review_output
+    kpis:
+      - open_conflicts
+      - claims_corrected_before_publication
+
+  # --- AI agents, each beneath the steward whose function it serves ---
+
+  - name: Intelligence Analyst
     participant_type: ai
     description: >
-      Gathers market intelligence, monitors industry trends, synthesizes
-      research into actionable briefings for client engagements.
+      Keeps the map current. Gathers market intelligence, monitors trends,
+      and synthesizes research into briefings for the Clarity Steward.
     decision_rights: conditional
     scope:
       allowed_actions:
@@ -64,28 +139,25 @@ roles:
       resource_limits:
         api_calls_per_day: 1000
         report_length_max_words: 5000
-      requires_approval_for:
-        - publish_content
-    accountability_to: Director
+    accountability_to: Clarity Steward
     escalation_rules:
       - trigger: confidence_low
-        target_role: Director
+        target_role: Clarity Steward
         threshold: 0.6
         message_template: >
           Low confidence on research finding: {description}.
           Requesting human review.
       - trigger: scope_boundary
-        target_role: Director
+        target_role: Clarity Steward
     kpis:
       - research_accuracy_score
       - briefing_actionability_rating
-      - trend_identification_lead_time
 
   - name: Content Strategist
     participant_type: ai
     description: >
-      Plans content calendar, drafts essay outlines, manages distribution
-      strategy for Substack, LinkedIn, and X.
+      Drafts essay outlines, plans the content calendar, and analyzes
+      engagement. A human decides what goes out.
     decision_rights: advisory
     scope:
       allowed_actions:
@@ -98,21 +170,20 @@ roles:
         - contact_client
         - make_purchase
       requires_approval_for:
-        - publish_content
         - change_calendar
-    accountability_to: Director
+    accountability_to: Narrative Steward
     escalation_rules:
       - trigger: scope_boundary
-        target_role: Director
+        target_role: Narrative Steward
     kpis:
-      - content_pipeline_velocity
+      - drafts_accepted_rate
       - topic_relevance_score
 
   - name: Lead Generation Agent
     participant_type: ai
     description: >
       Scans funding databases, identifies potential clients, scores leads,
-      and prepares outreach briefs for Director review.
+      and prepares outreach briefs for the Access Steward.
     decision_rights: conditional
     scope:
       allowed_actions:
@@ -127,82 +198,22 @@ roles:
         - access_financial_data
       resource_limits:
         leads_per_cycle: 20
-      requires_approval_for:
-        - contact_lead
-    accountability_to: Director
+    accountability_to: Access Steward
     escalation_rules:
       - trigger: confidence_low
-        target_role: Director
+        target_role: Access Steward
         threshold: 0.7
+      - trigger: scope_boundary
+        target_role: Access Steward
     kpis:
       - qualified_leads_per_cycle
       - lead_score_accuracy
 
-  - name: Operations Coordinator
-    steward_role: execution
-    participant_type: ai
-    description: >
-      Coordinates task flows between agents, tracks deadlines, manages
-      the operational cadence of the cell.
-    decision_rights: conditional
-    scope:
-      allowed_actions:
-        - assign_task
-        - track_progress
-        - send_reminder
-        - generate_status_report
-      forbidden_actions:
-        - approve_deliverable
-        - engage_client
-        - make_purchase
-        - override_decision
-      requires_approval_for:
-        - reassign_task
-        - change_deadline
-    accountability_to: Director
-    escalation_rules:
-      - trigger: timeout
-        target_role: Director
-        timeout_seconds: 86400
-      - trigger: conflict
-        target_role: Director
-    kpis:
-      - task_completion_rate
-      - on_time_delivery_rate
-
-  - name: Quality Reviewer
-    steward_role: integrity
-    participant_type: ai
-    description: >
-      Reviews all outputs for quality, consistency, and alignment with
-      Resomnium standards before delivery or publication.
-    decision_rights: advisory
-    scope:
-      allowed_actions:
-        - review_output
-        - flag_issue
-        - suggest_improvement
-        - check_compliance
-      forbidden_actions:
-        - approve_deliverable
-        - contact_client
-        - publish_content
-    accountability_to: Director
-    escalation_rules:
-      - trigger: scope_boundary
-        target_role: Director
-      - trigger: error
-        target_role: Director
-    kpis:
-      - review_thoroughness_score
-      - false_positive_rate
-
   - name: Relationship Manager
-    steward_role: access
     participant_type: ai
     description: >
       Tracks client and partner relationships, prepares meeting briefs,
-      manages CRM data, and identifies networking opportunities.
+      and keeps CRM data current.
     decision_rights: advisory
     scope:
       allowed_actions:
@@ -217,27 +228,119 @@ roles:
         - share_confidential_data
       requires_approval_for:
         - suggest_introduction
-    accountability_to: Director
+    accountability_to: Access Steward
     escalation_rules:
       - trigger: scope_boundary
-        target_role: Director
+        target_role: Access Steward
     kpis:
       - relationship_health_score
       - meeting_prep_quality
 
+  - name: Public Inbox
+    participant_type: ai
+    description: >
+      Resomnium's public A2A endpoint. Accepts a message, emails it to the
+      Access Steward, and returns a receipt that says it was delivered to a
+      human. No LLM. It does not answer, decide, or act on the message.
+    decision_rights: none
+    scope:
+      allowed_actions:
+        - receive_message
+        - relay_to_email
+        - issue_receipt
+      forbidden_actions:
+        - reply_to_inquiry
+        - make_commitment
+        - analyze_data
+    accountability_to: Access Steward
+    escalation_rules:
+      - trigger: error
+        target_role: Access Steward
+    kpis:
+      - delivery_success_rate
+
+  - name: Integrity Checker
+    participant_type: ai
+    description: >
+      Checks outputs for consistency, compliance, and claims that cannot be
+      backed. Logs and flags. Never overrules and never approves.
+    decision_rights: advisory
+    scope:
+      allowed_actions:
+        - review_output
+        - flag_issue
+        - check_compliance
+        - log_finding
+      forbidden_actions:
+        - approve_deliverable
+        - publish_content
+        - contact_client
+        - override_decision
+    accountability_to: Integrity Steward
+    escalation_rules:
+      - trigger: scope_boundary
+        target_role: Integrity Steward
+      - trigger: error
+        target_role: Integrity Steward
+    kpis:
+      - issues_caught_before_publication
+      - false_positive_rate
+
 participants:
-  - id: filip
-    name: Filip Blagojević
+  - id: clarity-steward
+    name: Clarity Steward
     participant_type: human
-    role: Director
+    role: Clarity Steward
     capabilities:
       - strategy
-      - client_engagement
-      - technical_architecture
-      - content_writing
+      - research_review
       - decision_making
     availability: business_hours
-    contact_protocol: email:filip@resomnium.com
+    contact_protocol: email
+
+  - id: execution-steward
+    name: Execution Steward
+    participant_type: human
+    role: Execution Steward
+    capabilities:
+      - delivery
+      - technical_architecture
+      - automation_design
+    availability: business_hours
+    contact_protocol: email
+
+  - id: narrative-steward
+    name: Narrative Steward
+    participant_type: human
+    role: Narrative Steward
+    capabilities:
+      - content_writing
+      - editing
+      - distribution
+    availability: business_hours
+    contact_protocol: email
+
+  - id: access-steward
+    name: Access Steward
+    participant_type: human
+    role: Access Steward
+    capabilities:
+      - client_engagement
+      - partnerships
+      - negotiation
+    availability: business_hours
+    contact_protocol: email
+
+  - id: integrity-steward
+    name: Integrity Steward
+    participant_type: human
+    role: Integrity Steward
+    capabilities:
+      - governance
+      - incentive_design
+      - mediation
+    availability: business_hours
+    contact_protocol: email
 
   - id: vox
     name: Vox
@@ -259,7 +362,6 @@ participants:
       - content_planning
       - copywriting
       - engagement_analysis
-      - distribution_strategy
     availability: always
     contact_protocol: api
 
@@ -275,30 +377,6 @@ participants:
     availability: always
     contact_protocol: api
 
-  - id: zach
-    name: Zach
-    participant_type: ai
-    role: Operations Coordinator
-    capabilities:
-      - task_management
-      - scheduling
-      - status_reporting
-      - coordination
-    availability: always
-    contact_protocol: a2a:https://resomnium.com/.well-known/agent-card.json
-
-  - id: corra
-    name: Corra
-    participant_type: ai
-    role: Quality Reviewer
-    capabilities:
-      - quality_review
-      - compliance_check
-      - style_consistency
-      - error_detection
-    availability: always
-    contact_protocol: api
-
   - id: q
     name: Q
     participant_type: ai
@@ -306,53 +384,102 @@ participants:
     capabilities:
       - crm_management
       - meeting_preparation
-      - network_analysis
       - relationship_tracking
     availability: always
     contact_protocol: api
 
+  - id: zach
+    name: Zach
+    participant_type: ai
+    role: Public Inbox
+    capabilities:
+      - receive_message
+      - relay_to_email
+      - issue_receipt
+    availability: always
+    contact_protocol: a2a:https://resomnium.com/.well-known/agent-card.json
+
+  - id: corra
+    name: Corra
+    participant_type: ai
+    role: Integrity Checker
+    capabilities:
+      - quality_review
+      - compliance_check
+      - error_detection
+    availability: always
+    contact_protocol: api
+
 handoff_protocols:
+  # Agents hand work to the steward they work beneath.
   - from_role: Intelligence Analyst
-    to_role: Director
+    to_role: Clarity Steward
     trigger: research_complete
     required_context:
       - research_brief
       - confidence_score
       - data_sources
-    validation: Director reviews and acknowledges receipt
-
-  - from_role: Lead Generation Agent
-    to_role: Director
-    trigger: lead_qualified
-    required_context:
-      - lead_brief
-      - qualification_score
-      - recommended_approach
-    validation: Director approves or rejects outreach
+    validation: Clarity Steward reviews and acknowledges receipt
 
   - from_role: Content Strategist
-    to_role: Quality Reviewer
+    to_role: Narrative Steward
     trigger: draft_ready
     required_context:
       - draft_content
       - target_audience
       - distribution_channel
-    validation: Quality review passes all checks
+    validation: Narrative Steward decides what goes out
 
-  - from_role: Quality Reviewer
-    to_role: Director
-    trigger: review_complete
+  - from_role: Lead Generation Agent
+    to_role: Access Steward
+    trigger: lead_qualified
     required_context:
-      - reviewed_content
-      - quality_score
-      - issues_found
-    validation: Director gives final approval
+      - lead_brief
+      - qualification_score
+      - recommended_approach
+    validation: Access Steward approves or rejects outreach
 
-  - from_role: Operations Coordinator
-    to_role: Director
-    trigger: escalation_needed
+  - from_role: Relationship Manager
+    to_role: Access Steward
+    trigger: brief_ready
     required_context:
-      - blocked_task
-      - reason
-      - suggested_resolution
-    validation: Director resolves or delegates
+      - meeting_brief
+      - relationship_history
+    validation: Access Steward reads the brief before the meeting
+
+  - from_role: Public Inbox
+    to_role: Access Steward
+    trigger: message_received
+    required_context:
+      - sender
+      - message
+      - receipt_id
+    validation: Access Steward replies or declines
+
+  - from_role: Integrity Checker
+    to_role: Integrity Steward
+    trigger: issue_flagged
+    required_context:
+      - flagged_output
+      - issue_found
+      - evidence
+    validation: Integrity Steward resolves or dismisses the flag
+
+  # Agents can pass work across functions.
+  - from_role: Content Strategist
+    to_role: Integrity Checker
+    trigger: claims_check_requested
+    required_context:
+      - draft_content
+      - claims_to_verify
+    validation: Integrity Checker logs every claim it could not back
+
+  # Stewards hand off to each other as peers.
+  - from_role: Access Steward
+    to_role: Execution Steward
+    trigger: engagement_signed
+    required_context:
+      - client
+      - agreed_scope
+      - deadline
+    validation: Execution Steward accepts the scope as a peer

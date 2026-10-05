@@ -39,6 +39,12 @@
           "description": "Whether every role must have explicit scope definitions",
           "title": "Require Scope Boundaries",
           "type": "boolean"
+        },
+        "require_human_stewards": {
+          "default": true,
+          "description": "Whether every steward role must be held by a human, with no reporting line between stewards, and every AI role must answer to a steward",
+          "title": "Require Human Stewards",
+          "type": "boolean"
         }
       },
       "title": "CellConfig",
@@ -366,7 +372,7 @@
       "type": "object"
     },
     "StewardRole": {
-      "description": "The five fixed steward roles in the Cell Framework.\n\nEvery cell has these five roles filled. Additional domain-specific\nroles can be added via the Role model.",
+      "description": "The five fixed steward roles in the Cell Framework.\n\nEvery cell has these five roles, each held by a human. The stewards are\npeers: none reports to another. AI agents work beneath a steward and never\nhold a steward role. Additional domain-specific roles can be added via the\nRole model.",
       "enum": [
         "clarity",
         "execution",

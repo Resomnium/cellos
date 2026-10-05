@@ -35,6 +35,8 @@ class FindingCategory(str, Enum):
     HANDOFF_MISSING = "handoff_missing"
     SCALABILITY_RISK = "scalability_risk"
     SINGLE_POINT_OF_FAILURE = "single_point_of_failure"
+    STEWARD_NOT_HUMAN = "steward_not_human"
+    HIERARCHY = "hierarchy"
 
 
 class Finding(BaseModel):
@@ -115,6 +117,7 @@ class DiagnosticAnalyzer:
         findings: list[Finding] = []
 
         findings.extend(self._check_steward_coverage(cell))
+        findings.extend(self._check_steward_holders(cell))
         findings.extend(self._check_accountability_chains(cell))
         findings.extend(self._check_scope_definitions(cell))
         findings.extend(self._check_human_oversight(cell))
@@ -149,22 +152,95 @@ class DiagnosticAnalyzer:
                         severity=Severity.HIGH,
                         title=f"Missing steward role: {sr.value}",
                         description=(
-                            f"The {sr.value} steward role is not assigned to any role in this cell. "
-                            f"This means the function of {self._steward_description(sr)} "
-                            f"has no clear owner."
+                            f"The {sr.value} steward role is not assigned to any role in this cell, "
+                            f"so nobody owns {self._steward_description(sr)}."
                         ),
                         recommendation=(
-                            f"Assign the {sr.value} steward function to an existing role "
-                            f"or create a new role for it."
+                            f"Assign the {sr.value} steward function to a role held by a human."
                         ),
                     )
                 )
         return findings
 
-    def _check_accountability_chains(self, cell: Cell) -> list[Finding]:
-        """Check for broken or missing accountability chains."""
+    def _check_steward_holders(self, cell: Cell) -> list[Finding]:
+        """Check that every steward role is held by a human and reports to no one."""
         findings = []
         for role in cell.roles:
+            if not role.steward_role:
+                continue
+            sr = role.steward_role
+
+            participants = cell.get_participants_for_role(role.name)
+            ai_held = role.participant_type == ParticipantType.AI or any(
+                p.participant_type == ParticipantType.AI for p in participants
+            )
+            if ai_held:
+                findings.append(
+                    Finding(
+                        category=FindingCategory.STEWARD_NOT_HUMAN,
+                        severity=Severity.CRITICAL,
+                        title=f"Steward role '{role.name}' is held by AI",
+                        description=(
+                            f"Role '{role.name}' holds the {sr.value} steward function, which owns "
+                            f"{self._steward_description(sr)}. Steward roles are held by humans. "
+                            f"AI agents work beneath a steward and never hold the seat."
+                        ),
+                        recommendation=(
+                            f"Put a human in '{role.name}' and move its AI participants into a "
+                            f"role beneath it, with accountability_to set to '{role.name}'."
+                        ),
+                        affected_roles=[role.name],
+                        affected_participants=[
+                            p.id for p in participants if p.participant_type == ParticipantType.AI
+                        ],
+                    )
+                )
+            elif not cell.is_human_held(role):
+                findings.append(
+                    Finding(
+                        category=FindingCategory.STEWARD_NOT_HUMAN,
+                        severity=Severity.HIGH,
+                        title=f"Steward role '{role.name}' is not held by a human",
+                        description=(
+                            f"Role '{role.name}' holds the {sr.value} steward function but is not "
+                            f"declared human (type: {role.participant_type.value}). Steward roles "
+                            f"are held by humans."
+                        ),
+                        recommendation=(
+                            f"Set participant_type to human on '{role.name}' and make sure "
+                            f"a human fills it."
+                        ),
+                        affected_roles=[role.name],
+                    )
+                )
+
+            if role.accountability_to:
+                findings.append(
+                    Finding(
+                        category=FindingCategory.HIERARCHY,
+                        severity=Severity.HIGH,
+                        title=f"Steward '{role.name}' reports to '{role.accountability_to}'",
+                        description=(
+                            f"Stewards are peers. A reporting line from steward '{role.name}' "
+                            f"to '{role.accountability_to}' puts a boss node above the cell."
+                        ),
+                        recommendation=(
+                            f"Remove accountability_to from '{role.name}'. Stewards answer to "
+                            f"each other as peers, not up a chain."
+                        ),
+                        affected_roles=[role.name, role.accountability_to],
+                    )
+                )
+        return findings
+
+    def _check_accountability_chains(self, cell: Cell) -> list[Finding]:
+        """Check that every agent role answers, possibly through other agents, to a steward."""
+        findings = []
+        for role in cell.roles:
+            # Steward roles answer to no one; _check_steward_holders covers them.
+            if role.steward_role:
+                continue
+
             if not role.accountability_to:
                 if role.participant_type != ParticipantType.HUMAN:
                     findings.append(
@@ -174,34 +250,54 @@ class DiagnosticAnalyzer:
                             title=f"AI role '{role.name}' has no accountability chain",
                             description=(
                                 f"Role '{role.name}' (type: {role.participant_type.value}) "
-                                f"is not accountable to any other role. AI participants must "
-                                f"have clear accountability to a human decision-maker."
+                                f"is not accountable to any other role. Every AI agent must "
+                                f"answer to the human steward it works beneath."
                             ),
                             recommendation=(
-                                f"Set accountability_to for role '{role.name}' "
-                                f"to a human-occupied role."
+                                f"Set accountability_to for role '{role.name}' to the steward "
+                                f"role whose function it works under."
                             ),
                             affected_roles=[role.name],
                         )
                     )
+                continue
 
             # Check for circular accountability
-            if role.accountability_to:
-                target = cell.get_role(role.accountability_to)
-                if target and target.accountability_to == role.name:
-                    findings.append(
-                        Finding(
-                            category=FindingCategory.ACCOUNTABILITY_GAP,
-                            severity=Severity.HIGH,
-                            title=f"Circular accountability: {role.name} <-> {target.name}",
-                            description=(
-                                f"Roles '{role.name}' and '{target.name}' are accountable "
-                                f"to each other, creating a circular chain with no clear authority."
-                            ),
-                            recommendation="Break the circle by establishing a clear hierarchy.",
-                            affected_roles=[role.name, target.name],
-                        )
+            target = cell.get_role(role.accountability_to)
+            if target and target.accountability_to == role.name:
+                findings.append(
+                    Finding(
+                        category=FindingCategory.ACCOUNTABILITY_GAP,
+                        severity=Severity.HIGH,
+                        title=f"Circular accountability: {role.name} <-> {target.name}",
+                        description=(
+                            f"Roles '{role.name}' and '{target.name}' are accountable "
+                            f"to each other, creating a circular chain that never reaches a steward."
+                        ),
+                        recommendation=(
+                            "Break the circle: each agent answers to the one steward it works beneath."
+                        ),
+                        affected_roles=[role.name, target.name],
                     )
+                )
+            elif not cell.is_human_held(role) and not cell.get_accountable_steward(role):
+                findings.append(
+                    Finding(
+                        category=FindingCategory.ACCOUNTABILITY_GAP,
+                        severity=Severity.HIGH,
+                        title=f"Role '{role.name}' does not answer to a steward",
+                        description=(
+                            f"Role '{role.name}' is accountable to '{role.accountability_to}', "
+                            f"but that chain never reaches a steward role. Every agent works "
+                            f"beneath one of the five human stewards."
+                        ),
+                        recommendation=(
+                            f"Point accountability_to for '{role.name}' at the steward role whose "
+                            f"function it works under, or at an agent that answers to that steward."
+                        ),
+                        affected_roles=[role.name],
+                    )
+                )
         return findings
 
     def _check_scope_definitions(self, cell: Cell) -> list[Finding]:
@@ -465,10 +561,12 @@ class DiagnosticAnalyzer:
     def _steward_description(sr: StewardRole) -> str:
         """Get a human-readable description of a steward role."""
         descriptions = {
-            StewardRole.CLARITY: "strategic direction and priorities",
-            StewardRole.EXECUTION: "operational coordination and delivery",
-            StewardRole.NARRATIVE: "content, messaging, and distribution",
-            StewardRole.ACCESS: "relationships and partnerships",
-            StewardRole.INTEGRITY: "financial discipline and accountability",
+            StewardRole.CLARITY: "the question (direction, scope and what done means)",
+            StewardRole.EXECUTION: (
+                "the doing (delivery, quality, tooling, and what gets automated)"
+            ),
+            StewardRole.NARRATIVE: "the story (what is said, where, and in whose voice)",
+            StewardRole.ACCESS: "the doors (customers, partners and capital)",
+            StewardRole.INTEGRITY: "trust (governance, incentives, conflict and accountability)",
         }
         return descriptions.get(sr, sr.value)

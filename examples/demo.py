@@ -1,7 +1,7 @@
 """CellOS Demo — Showcases the full framework in action.
 
 This demo:
-1. Loads Resomnium's real cell definition from YAML
+1. Loads the Resomnium reference cell from YAML
 2. Runs a diagnostic analysis
 3. Creates a coordination runtime
 4. Demonstrates scope checking, task routing, and escalation
@@ -35,8 +35,8 @@ def main():
         border_style="cyan",
     ))
 
-    # --- 1. Load a real cell definition ---
-    console.print("\n[bold]1. Loading Resomnium's Cell Definition[/bold]\n")
+    # --- 1. Load the reference cell definition ---
+    console.print("\n[bold]1. Loading the Resomnium Reference Cell[/bold]\n")
 
     cell_path = Path(__file__).parent / "resomnium-cell.yaml"
     cell = load_cell_from_yaml(cell_path)
@@ -90,7 +90,8 @@ def main():
         ("vox", "search_web for competitor analysis"),
         ("vox", "publish content to Substack"),
         ("scout", "contact_lead at TechCorp"),
-        ("zach", "assign_task to Vox"),
+        ("zach", "relay_to_email new inquiry"),
+        ("zach", "reply_to_inquiry on behalf of the studio"),
         ("corra", "review_output of lead brief"),
     ]
 
