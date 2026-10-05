@@ -110,7 +110,7 @@ class CellRuntime:
         # Check if action requires approval
         for requires_approval in role.scope.requires_approval_for:
             if requires_approval.lower() in action.lower():
-                approval_from = role.accountability_to or "governance"
+                approval_from = role.accountability_to or "integrity"
                 self.audit.log(
                     cell_id=self.cell.id,
                     action=ActionType.SCOPE_CHECK,

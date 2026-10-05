@@ -36,7 +36,7 @@ def make_healthy_cell() -> Cell:
                  scope=ScopeDefinition(allowed_actions=["connect"]),
                  accountability_to="Lead", kpis=["connections"],
                  escalation_rules=[{"trigger": "scope_boundary", "target_role": "Lead"}]),
-            Role(name="Checker", steward_role=StewardRole.GOVERNANCE, participant_type=ParticipantType.AI,
+            Role(name="Checker", steward_role=StewardRole.INTEGRITY, participant_type=ParticipantType.AI,
                  description="Checks", decision_rights=DecisionRight.ADVISORY,
                  scope=ScopeDefinition(allowed_actions=["review"]),
                  accountability_to="Lead", kpis=["accuracy"],

@@ -20,7 +20,7 @@ def generate_cell_json_schema(indent: int = 2) -> str:
     """
     schema = Cell.model_json_schema()
     schema["$schema"] = "https://json-schema.org/draft/2020-12/schema"
-    schema["$id"] = "https://resomnium.com/schemas/cellos/cell-v0.1.0.json"
+    schema["$id"] = "https://resomnium.com/schemas/cellos/cell-v0.2.0.json"
     schema["title"] = "CellOS Cell Definition"
     schema["description"] = (
         "Schema for defining an organizational cell where humans and AI agents "

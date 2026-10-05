@@ -1,6 +1,10 @@
 """Tests for the Cell Schema models."""
 
+import json
+from pathlib import Path
+
 import pytest
+from cellos.schema.json_schema import generate_cell_json_schema
 from cellos.schema.models import (
     Cell,
     CellConfig,
@@ -73,7 +77,7 @@ def make_complete_cell() -> Cell:
             ),
             Role(
                 name="Auditor",
-                steward_role=StewardRole.GOVERNANCE,
+                steward_role=StewardRole.INTEGRITY,
                 participant_type=ParticipantType.AI,
                 description="Quality and compliance",
                 decision_rights=DecisionRight.ADVISORY,
@@ -179,15 +183,31 @@ class TestCellModel:
 
     def test_validate_missing_steward(self):
         cell = make_complete_cell()
-        cell.roles = [r for r in cell.roles if r.steward_role != StewardRole.GOVERNANCE]
+        cell.roles = [r for r in cell.roles if r.steward_role != StewardRole.INTEGRITY]
         issues = cell.validate_completeness()
-        assert any("governance" in i.lower() for i in issues)
+        assert any("integrity" in i.lower() for i in issues)
 
     def test_validate_no_humans_required(self):
         cell = make_complete_cell()
         cell.participants = [p for p in cell.participants if p.participant_type != ParticipantType.HUMAN]
         issues = cell.validate_completeness()
         assert any("human" in i.lower() for i in issues)
+
+
+class TestStewardRole:
+    def test_governance_is_deprecated_alias_for_integrity(self):
+        with pytest.warns(FutureWarning, match="integrity"):
+            role = Role(name="Steward", steward_role="governance")
+        assert role.steward_role is StewardRole.INTEGRITY
+        assert role.model_dump(mode="json")["steward_role"] == "integrity"
+
+    def test_published_schema_matches_models(self):
+        schema_path = Path(__file__).parent.parent / "cellos" / "schema" / "cell-schema-v0.2.0.json"
+        published = json.loads(schema_path.read_text(encoding="utf-8"))
+        assert published == json.loads(generate_cell_json_schema())
+        assert published["$defs"]["StewardRole"]["enum"] == [
+            "clarity", "execution", "narrative", "access", "integrity",
+        ]
 
 
 class TestScopeDefinition:

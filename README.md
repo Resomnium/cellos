@@ -79,7 +79,7 @@ cellos diagnose my-cell.yaml
   *Recommendation:* Set accountability_to to a human-occupied role.
 
 ## HIGH (2)
-**Missing steward role: governance**
+**Missing steward role: integrity**
   ...
 ```
 
@@ -127,7 +127,7 @@ print(report.to_markdown())
 CellOS implements the **Cell Framework** — an organizational design methodology where:
 
 - **Cells** are small (2-15 participant) autonomous units
-- Every cell has **5 steward roles**: Clarity, Execution, Narrative, Access, Governance
+- Every cell has **5 steward roles**: Clarity, Execution, Narrative, Access, Integrity
 - Human and AI participants have **explicit scope boundaries**
 - **Accountability chains** ensure every AI action has a human accountable
 - **Handoff protocols** define how work transitions between participants

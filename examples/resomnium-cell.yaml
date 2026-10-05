@@ -171,7 +171,7 @@ roles:
       - on_time_delivery_rate
 
   - name: Quality Reviewer
-    steward_role: governance
+    steward_role: integrity
     participant_type: ai
     description: >
       Reviews all outputs for quality, consistency, and alignment with
