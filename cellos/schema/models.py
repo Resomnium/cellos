@@ -7,6 +7,7 @@ coordination protocols.
 
 from __future__ import annotations
 
+import warnings
 from datetime import datetime
 from enum import Enum
 from typing import Any
@@ -33,7 +34,21 @@ class StewardRole(str, Enum):
     EXECUTION = "execution"  # Operational coordination, delivery
     NARRATIVE = "narrative"  # Content, messaging, distribution
     ACCESS = "access"  # Relationships, partnerships
-    GOVERNANCE = "governance"  # Financial discipline, accountability
+    INTEGRITY = "integrity"  # Financial discipline, accountability
+
+    @classmethod
+    def _missing_(cls, value: object) -> StewardRole | None:
+        # "governance" was renamed to "integrity" in 0.2.0. Accept the old value
+        # on load so existing cell definitions keep working; always emit "integrity".
+        if value == "governance":
+            warnings.warn(
+                "Steward role 'governance' was renamed to 'integrity' in CellOS 0.2.0. "
+                "'governance' is a deprecated alias and will be removed in a future release.",
+                FutureWarning,
+                stacklevel=2,
+            )
+            return cls.INTEGRITY
+        return None
 
 
 class DecisionRight(str, Enum):

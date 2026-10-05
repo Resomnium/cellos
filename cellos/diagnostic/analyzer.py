@@ -469,6 +469,6 @@ class DiagnosticAnalyzer:
             StewardRole.EXECUTION: "operational coordination and delivery",
             StewardRole.NARRATIVE: "content, messaging, and distribution",
             StewardRole.ACCESS: "relationships and partnerships",
-            StewardRole.GOVERNANCE: "financial discipline and accountability",
+            StewardRole.INTEGRITY: "financial discipline and accountability",
         }
         return descriptions.get(sr, sr.value)
