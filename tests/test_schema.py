@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 
+import cellos
 import pytest
 from cellos.schema.json_schema import generate_cell_json_schema
 from cellos.schema.models import (
@@ -18,6 +19,8 @@ from cellos.schema.models import (
     ScopeDefinition,
     StewardRole,
 )
+
+REPO_ROOT = Path(__file__).parent.parent
 
 
 def make_complete_cell() -> Cell:
@@ -300,8 +303,16 @@ class TestStewardRole:
         assert role.steward_role is StewardRole.INTEGRITY
         assert role.model_dump(mode="json")["steward_role"] == "integrity"
 
+    def test_versions_agree(self):
+        pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+        assert f'version = "{cellos.__version__}"' in pyproject
+        schema_id = json.loads(generate_cell_json_schema())["$id"]
+        assert schema_id.endswith(f"/cell-v{cellos.__version__}.json")
+
     def test_published_schema_matches_models(self):
-        schema_path = Path(__file__).parent.parent / "cellos" / "schema" / "cell-schema-v0.2.0.json"
+        # Released schema files are frozen. A schema change ships as a new version
+        # with its own file, so this checks the file for the current version only.
+        schema_path = REPO_ROOT / "cellos" / "schema" / f"cell-schema-v{cellos.__version__}.json"
         published = json.loads(schema_path.read_text(encoding="utf-8"))
         assert published == json.loads(generate_cell_json_schema())
         assert published["$defs"]["StewardRole"]["enum"] == [
