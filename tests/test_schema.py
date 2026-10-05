@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 
+import cellos
 import pytest
 from cellos.schema.json_schema import generate_cell_json_schema
 from cellos.schema.models import (
@@ -19,26 +20,66 @@ from cellos.schema.models import (
     StewardRole,
 )
 
+REPO_ROOT = Path(__file__).parent.parent
+
 
 def make_complete_cell() -> Cell:
-    """Create a complete, valid cell for testing."""
+    """Create a complete, valid cell for testing.
+
+    Five human stewards in a flat ring, each AI agent working beneath one of them.
+    """
     return Cell(
         id="test-cell",
         name="Test Cell",
         mandate="Testing the Cell Framework",
         roles=[
             Role(
-                name="Lead",
+                name="Clarity Steward",
                 steward_role=StewardRole.CLARITY,
                 participant_type=ParticipantType.HUMAN,
-                description="Strategic lead",
+                description="Owns direction and scope",
                 decision_rights=DecisionRight.FULL,
                 scope=ScopeDefinition(allowed_actions=["decide", "review"]),
                 kpis=["decisions_per_week"],
             ),
             Role(
-                name="Executor",
+                name="Execution Steward",
                 steward_role=StewardRole.EXECUTION,
+                participant_type=ParticipantType.HUMAN,
+                description="Owns delivery",
+                decision_rights=DecisionRight.FULL,
+                scope=ScopeDefinition(allowed_actions=["deliver", "review"]),
+                kpis=["on_time_delivery"],
+            ),
+            Role(
+                name="Narrative Steward",
+                steward_role=StewardRole.NARRATIVE,
+                participant_type=ParticipantType.HUMAN,
+                description="Owns the story",
+                decision_rights=DecisionRight.FULL,
+                scope=ScopeDefinition(allowed_actions=["publish", "review"]),
+                kpis=["content_quality"],
+            ),
+            Role(
+                name="Access Steward",
+                steward_role=StewardRole.ACCESS,
+                participant_type=ParticipantType.HUMAN,
+                description="Owns relationships",
+                decision_rights=DecisionRight.FULL,
+                scope=ScopeDefinition(allowed_actions=["engage", "review"]),
+                kpis=["connections_made"],
+            ),
+            Role(
+                name="Integrity Steward",
+                steward_role=StewardRole.INTEGRITY,
+                participant_type=ParticipantType.HUMAN,
+                description="Owns trust",
+                decision_rights=DecisionRight.FULL,
+                scope=ScopeDefinition(allowed_actions=["audit", "review"]),
+                kpis=["issues_caught"],
+            ),
+            Role(
+                name="Executor",
                 participant_type=ParticipantType.AI,
                 description="Executes tasks",
                 decision_rights=DecisionRight.CONDITIONAL,
@@ -46,44 +87,23 @@ def make_complete_cell() -> Cell:
                     allowed_actions=["execute", "report"],
                     forbidden_actions=["delete", "publish"],
                 ),
-                accountability_to="Lead",
+                accountability_to="Execution Steward",
                 escalation_rules=[
                     EscalationRule(
                         trigger=EscalationTrigger.SCOPE_BOUNDARY,
-                        target_role="Lead",
+                        target_role="Execution Steward",
                     )
                 ],
                 kpis=["tasks_completed"],
             ),
             Role(
                 name="Narrator",
-                steward_role=StewardRole.NARRATIVE,
                 participant_type=ParticipantType.AI,
-                description="Content creation",
+                description="Drafts content",
                 decision_rights=DecisionRight.ADVISORY,
                 scope=ScopeDefinition(allowed_actions=["draft", "analyze"]),
-                accountability_to="Lead",
-                kpis=["content_quality"],
-            ),
-            Role(
-                name="Connector",
-                steward_role=StewardRole.ACCESS,
-                participant_type=ParticipantType.AI,
-                description="Relationship management",
-                decision_rights=DecisionRight.ADVISORY,
-                scope=ScopeDefinition(allowed_actions=["track", "suggest"]),
-                accountability_to="Lead",
-                kpis=["connections_made"],
-            ),
-            Role(
-                name="Auditor",
-                steward_role=StewardRole.INTEGRITY,
-                participant_type=ParticipantType.AI,
-                description="Quality and compliance",
-                decision_rights=DecisionRight.ADVISORY,
-                scope=ScopeDefinition(allowed_actions=["review", "flag"]),
-                accountability_to="Lead",
-                kpis=["issues_caught"],
+                accountability_to="Narrative Steward",
+                kpis=["drafts_accepted"],
             ),
         ],
         participants=[
@@ -91,8 +111,36 @@ def make_complete_cell() -> Cell:
                 id="human-1",
                 name="Alice",
                 participant_type=ParticipantType.HUMAN,
-                role="Lead",
+                role="Clarity Steward",
                 capabilities=["strategy", "review"],
+            ),
+            Participant(
+                id="human-2",
+                name="Bilal",
+                participant_type=ParticipantType.HUMAN,
+                role="Execution Steward",
+                capabilities=["delivery"],
+            ),
+            Participant(
+                id="human-3",
+                name="Chen",
+                participant_type=ParticipantType.HUMAN,
+                role="Narrative Steward",
+                capabilities=["writing"],
+            ),
+            Participant(
+                id="human-4",
+                name="Dara",
+                participant_type=ParticipantType.HUMAN,
+                role="Access Steward",
+                capabilities=["partnerships"],
+            ),
+            Participant(
+                id="human-5",
+                name="Emeka",
+                participant_type=ParticipantType.HUMAN,
+                role="Integrity Steward",
+                capabilities=["audit"],
             ),
             Participant(
                 id="ai-1",
@@ -108,25 +156,11 @@ def make_complete_cell() -> Cell:
                 role="Narrator",
                 capabilities=["draft", "analyze"],
             ),
-            Participant(
-                id="ai-3",
-                name="Bot-Connect",
-                participant_type=ParticipantType.AI,
-                role="Connector",
-                capabilities=["track", "suggest"],
-            ),
-            Participant(
-                id="ai-4",
-                name="Bot-Audit",
-                participant_type=ParticipantType.AI,
-                role="Auditor",
-                capabilities=["review", "flag"],
-            ),
         ],
         handoff_protocols=[
             HandoffProtocol(
                 from_role="Executor",
-                to_role="Lead",
+                to_role="Execution Steward",
                 trigger="task_complete",
                 required_context=["result", "confidence"],
             ),
@@ -139,12 +173,12 @@ class TestCellModel:
         cell = make_complete_cell()
         assert cell.id == "test-cell"
         assert cell.name == "Test Cell"
-        assert len(cell.roles) == 5
-        assert len(cell.participants) == 5
+        assert len(cell.roles) == 7
+        assert len(cell.participants) == 7
 
     def test_get_role(self):
         cell = make_complete_cell()
-        role = cell.get_role("Lead")
+        role = cell.get_role("Clarity Steward")
         assert role is not None
         assert role.steward_role == StewardRole.CLARITY
 
@@ -156,25 +190,25 @@ class TestCellModel:
 
     def test_get_participants_for_role(self):
         cell = make_complete_cell()
-        parts = cell.get_participants_for_role("Lead")
+        parts = cell.get_participants_for_role("Clarity Steward")
         assert len(parts) == 1
         assert parts[0].id == "human-1"
 
     def test_get_human_participants(self):
         cell = make_complete_cell()
         humans = cell.get_human_participants()
-        assert len(humans) == 1
+        assert len(humans) == 5
 
     def test_get_ai_participants(self):
         cell = make_complete_cell()
         ais = cell.get_ai_participants()
-        assert len(ais) == 4
+        assert len(ais) == 2
 
     def test_get_steward(self):
         cell = make_complete_cell()
         clarity = cell.get_steward(StewardRole.CLARITY)
         assert clarity is not None
-        assert clarity.name == "Lead"
+        assert clarity.name == "Clarity Steward"
 
     def test_validate_completeness_valid(self):
         cell = make_complete_cell()
@@ -194,6 +228,74 @@ class TestCellModel:
         assert any("human" in i.lower() for i in issues)
 
 
+class TestHumanStewards:
+    def test_require_human_stewards_is_on_by_default(self):
+        assert CellConfig().require_human_stewards is True
+
+    def test_ai_held_steward_is_incomplete(self):
+        cell = make_complete_cell()
+        cell.get_role("Integrity Steward").participant_type = ParticipantType.AI
+        cell.get_participant("human-5").participant_type = ParticipantType.AI
+        issues = cell.validate_completeness()
+        assert any("Integrity Steward" in i and "human" in i for i in issues)
+
+    def test_ai_participant_in_human_steward_role_is_incomplete(self):
+        cell = make_complete_cell()
+        cell.participants.append(
+            Participant(id="ai-3", name="Bot-Seat", participant_type=ParticipantType.AI,
+                        role="Execution Steward")
+        )
+        issues = cell.validate_completeness()
+        assert any("Execution Steward" in i and "human" in i for i in issues)
+
+    def test_hybrid_steward_is_incomplete(self):
+        cell = make_complete_cell()
+        cell.get_role("Access Steward").participant_type = ParticipantType.HYBRID
+        issues = cell.validate_completeness()
+        assert any("Access Steward" in i and "human" in i for i in issues)
+
+    def test_steward_with_a_reporting_line_is_incomplete(self):
+        cell = make_complete_cell()
+        cell.get_role("Narrative Steward").accountability_to = "Clarity Steward"
+        issues = cell.validate_completeness()
+        assert any("Narrative Steward" in i and "peers" in i for i in issues)
+
+    def test_agent_without_a_steward_is_incomplete(self):
+        cell = make_complete_cell()
+        cell.get_role("Narrator").accountability_to = None
+        issues = cell.validate_completeness()
+        assert any("Narrator" in i and "steward" in i for i in issues)
+
+    def test_agent_accountability_cycle_is_incomplete(self):
+        cell = make_complete_cell()
+        cell.get_role("Executor").accountability_to = "Narrator"
+        cell.get_role("Narrator").accountability_to = "Executor"
+        issues = cell.validate_completeness()
+        assert any("Executor" in i and "steward" in i for i in issues)
+        assert any("Narrator" in i and "steward" in i for i in issues)
+
+    def test_agent_may_answer_to_a_steward_through_another_agent(self):
+        cell = make_complete_cell()
+        cell.roles.append(
+            Role(name="Sub-Agent", participant_type=ParticipantType.AI,
+                 scope=ScopeDefinition(allowed_actions=["execute"]), accountability_to="Executor")
+        )
+        cell.participants.append(
+            Participant(id="ai-3", name="Bot-Sub", participant_type=ParticipantType.AI, role="Sub-Agent")
+        )
+        cell.config.max_participants = 8
+        assert cell.validate_completeness() == []
+
+    def test_human_steward_checks_can_be_switched_off(self):
+        cell = make_complete_cell()
+        cell.config = CellConfig(require_human_stewards=False)
+        assert cell.config.require_human_stewards is False
+        cell.get_role("Integrity Steward").participant_type = ParticipantType.AI
+        cell.get_participant("human-5").participant_type = ParticipantType.AI
+        cell.get_role("Integrity Steward").accountability_to = "Clarity Steward"
+        assert cell.validate_completeness() == []
+
+
 class TestStewardRole:
     def test_governance_is_deprecated_alias_for_integrity(self):
         with pytest.warns(FutureWarning, match="integrity"):
@@ -201,8 +303,16 @@ class TestStewardRole:
         assert role.steward_role is StewardRole.INTEGRITY
         assert role.model_dump(mode="json")["steward_role"] == "integrity"
 
+    def test_versions_agree(self):
+        pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+        assert f'version = "{cellos.__version__}"' in pyproject
+        schema_id = json.loads(generate_cell_json_schema())["$id"]
+        assert schema_id.endswith(f"/cell-v{cellos.__version__}.json")
+
     def test_published_schema_matches_models(self):
-        schema_path = Path(__file__).parent.parent / "cellos" / "schema" / "cell-schema-v0.2.0.json"
+        # Released schema files are frozen. A schema change ships as a new version
+        # with its own file, so this checks the file for the current version only.
+        schema_path = REPO_ROOT / "cellos" / "schema" / f"cell-schema-v{cellos.__version__}.json"
         published = json.loads(schema_path.read_text(encoding="utf-8"))
         assert published == json.loads(generate_cell_json_schema())
         assert published["$defs"]["StewardRole"]["enum"] == [

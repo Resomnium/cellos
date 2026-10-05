@@ -10,7 +10,7 @@ Three layers:
     3. Diagnostic Toolkit - Organizational AI-readiness assessment
 """
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 from cellos.schema.models import (
     Cell,

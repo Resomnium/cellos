@@ -1,0 +1,464 @@
+{
+  "$defs": {
+    "CellConfig": {
+      "description": "Configuration parameters for cell behavior.",
+      "properties": {
+        "max_participants": {
+          "default": 7,
+          "maximum": 15,
+          "minimum": 2,
+          "title": "Max Participants",
+          "type": "integer"
+        },
+        "require_human_oversight": {
+          "default": true,
+          "description": "Whether at least one human must be in every decision chain",
+          "title": "Require Human Oversight",
+          "type": "boolean"
+        },
+        "audit_all_actions": {
+          "default": true,
+          "description": "Whether to log every action for accountability",
+          "title": "Audit All Actions",
+          "type": "boolean"
+        },
+        "default_escalation_timeout": {
+          "default": 3600,
+          "description": "Default seconds before unresponded tasks escalate",
+          "title": "Default Escalation Timeout",
+          "type": "integer"
+        },
+        "allow_ai_to_ai_handoffs": {
+          "default": true,
+          "description": "Whether AI participants can hand off directly to other AI",
+          "title": "Allow Ai To Ai Handoffs",
+          "type": "boolean"
+        },
+        "require_scope_boundaries": {
+          "default": true,
+          "description": "Whether every role must have explicit scope definitions",
+          "title": "Require Scope Boundaries",
+          "type": "boolean"
+        },
+        "require_human_stewards": {
+          "default": true,
+          "description": "Whether every steward role must be held by a human, with no reporting line between stewards, and every AI role must answer to a steward",
+          "title": "Require Human Stewards",
+          "type": "boolean"
+        }
+      },
+      "title": "CellConfig",
+      "type": "object"
+    },
+    "DecisionRight": {
+      "description": "Level of autonomous decision-making authority.",
+      "enum": [
+        "full",
+        "conditional",
+        "advisory",
+        "none"
+      ],
+      "title": "DecisionRight",
+      "type": "string"
+    },
+    "EscalationRule": {
+      "description": "Defines when and how to escalate to a human or higher authority.",
+      "properties": {
+        "trigger": {
+          "$ref": "#/$defs/EscalationTrigger"
+        },
+        "target_role": {
+          "description": "Role to escalate to",
+          "title": "Target Role",
+          "type": "string"
+        },
+        "timeout_seconds": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Max time to wait before escalating (for timeout triggers)",
+          "title": "Timeout Seconds"
+        },
+        "threshold": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Threshold value (e.g., confidence score, cost amount)",
+          "title": "Threshold"
+        },
+        "message_template": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Template for the escalation notification",
+          "title": "Message Template"
+        }
+      },
+      "required": [
+        "trigger",
+        "target_role"
+      ],
+      "title": "EscalationRule",
+      "type": "object"
+    },
+    "EscalationTrigger": {
+      "description": "Conditions that trigger escalation to a human or higher authority.",
+      "enum": [
+        "scope_boundary",
+        "confidence_low",
+        "cost_threshold",
+        "timeout",
+        "conflict",
+        "error",
+        "explicit"
+      ],
+      "title": "EscalationTrigger",
+      "type": "string"
+    },
+    "HandoffProtocol": {
+      "description": "Defines how work transitions between participants.",
+      "properties": {
+        "from_role": {
+          "title": "From Role",
+          "type": "string"
+        },
+        "to_role": {
+          "title": "To Role",
+          "type": "string"
+        },
+        "trigger": {
+          "description": "Condition that initiates the handoff",
+          "title": "Trigger",
+          "type": "string"
+        },
+        "required_context": {
+          "description": "Information that must be passed during handoff",
+          "items": {
+            "type": "string"
+          },
+          "title": "Required Context",
+          "type": "array"
+        },
+        "validation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Validation step before handoff completes",
+          "title": "Validation"
+        },
+        "fallback_role": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Role to hand off to if primary target is unavailable",
+          "title": "Fallback Role"
+        }
+      },
+      "required": [
+        "from_role",
+        "to_role",
+        "trigger"
+      ],
+      "title": "HandoffProtocol",
+      "type": "object"
+    },
+    "Participant": {
+      "description": "A concrete participant (human or AI) assigned to a role in a cell.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "participant_type": {
+          "$ref": "#/$defs/ParticipantType"
+        },
+        "role": {
+          "description": "Name of the Role this participant fills",
+          "title": "Role",
+          "type": "string"
+        },
+        "capabilities": {
+          "description": "What this participant can do",
+          "items": {
+            "type": "string"
+          },
+          "title": "Capabilities",
+          "type": "array"
+        },
+        "availability": {
+          "default": "always",
+          "description": "Availability schedule (always, business_hours, on_demand)",
+          "title": "Availability",
+          "type": "string"
+        },
+        "contact_protocol": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "How to reach this participant (email, API endpoint, A2A agent card URL)",
+          "title": "Contact Protocol"
+        },
+        "metadata": {
+          "additionalProperties": true,
+          "description": "Additional participant-specific metadata",
+          "title": "Metadata",
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "participant_type",
+        "role"
+      ],
+      "title": "Participant",
+      "type": "object"
+    },
+    "ParticipantType": {
+      "description": "Whether a cell participant is human or AI.",
+      "enum": [
+        "human",
+        "ai",
+        "hybrid"
+      ],
+      "title": "ParticipantType",
+      "type": "string"
+    },
+    "Role": {
+      "description": "A role within a cell, which can be filled by a human or AI participant.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "steward_role": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StewardRole"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Which steward role this maps to, if any"
+        },
+        "participant_type": {
+          "$ref": "#/$defs/ParticipantType",
+          "default": "hybrid"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "decision_rights": {
+          "$ref": "#/$defs/DecisionRight",
+          "default": "advisory"
+        },
+        "scope": {
+          "$ref": "#/$defs/ScopeDefinition"
+        },
+        "escalation_rules": {
+          "items": {
+            "$ref": "#/$defs/EscalationRule"
+          },
+          "title": "Escalation Rules",
+          "type": "array"
+        },
+        "accountability_to": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Role that this role is accountable to",
+          "title": "Accountability To"
+        },
+        "kpis": {
+          "description": "Key performance indicators for this role",
+          "items": {
+            "type": "string"
+          },
+          "title": "Kpis",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "Role",
+      "type": "object"
+    },
+    "ScopeDefinition": {
+      "description": "Defines the boundaries of what a participant can do.",
+      "properties": {
+        "allowed_actions": {
+          "description": "Actions this participant is authorized to perform",
+          "items": {
+            "type": "string"
+          },
+          "title": "Allowed Actions",
+          "type": "array"
+        },
+        "forbidden_actions": {
+          "description": "Actions explicitly forbidden for this participant",
+          "items": {
+            "type": "string"
+          },
+          "title": "Forbidden Actions",
+          "type": "array"
+        },
+        "resource_limits": {
+          "additionalProperties": true,
+          "description": "Resource limits (e.g., budget caps, API call limits, time limits)",
+          "title": "Resource Limits",
+          "type": "object"
+        },
+        "requires_approval_for": {
+          "description": "Actions that require explicit approval before execution",
+          "items": {
+            "type": "string"
+          },
+          "title": "Requires Approval For",
+          "type": "array"
+        }
+      },
+      "title": "ScopeDefinition",
+      "type": "object"
+    },
+    "StewardRole": {
+      "description": "The five fixed steward roles in the Cell Framework.\n\nEvery cell has these five roles, each held by a human. The stewards are\npeers: none reports to another. AI agents work beneath a steward and never\nhold a steward role. Additional domain-specific roles can be added via the\nRole model.",
+      "enum": [
+        "clarity",
+        "execution",
+        "narrative",
+        "access",
+        "integrity"
+      ],
+      "title": "StewardRole",
+      "type": "string"
+    }
+  },
+  "description": "Schema for defining an organizational cell where humans and AI agents collaborate with explicit roles, accountability, and coordination protocols. Part of the CellOS open framework (https://github.com/resomnium/cellos).",
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "description": {
+      "default": "",
+      "title": "Description",
+      "type": "string"
+    },
+    "mandate": {
+      "default": "",
+      "description": "The cell's mission - what it exists to accomplish",
+      "title": "Mandate",
+      "type": "string"
+    },
+    "roles": {
+      "items": {
+        "$ref": "#/$defs/Role"
+      },
+      "title": "Roles",
+      "type": "array"
+    },
+    "participants": {
+      "items": {
+        "$ref": "#/$defs/Participant"
+      },
+      "title": "Participants",
+      "type": "array"
+    },
+    "handoff_protocols": {
+      "items": {
+        "$ref": "#/$defs/HandoffProtocol"
+      },
+      "title": "Handoff Protocols",
+      "type": "array"
+    },
+    "config": {
+      "$ref": "#/$defs/CellConfig"
+    },
+    "parent_cell_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "ID of parent cell if this is a nested sub-cell",
+      "title": "Parent Cell Id"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "metadata": {
+      "additionalProperties": true,
+      "title": "Metadata",
+      "type": "object"
+    }
+  },
+  "required": [
+    "id",
+    "name"
+  ],
+  "title": "CellOS Cell Definition",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://resomnium.com/schemas/cellos/cell-v0.3.0.json"
+}

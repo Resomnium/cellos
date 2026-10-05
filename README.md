@@ -75,8 +75,8 @@ cellos diagnose my-cell.yaml
 
 ## CRITICAL (1)
 **AI role 'Research Agent' has no accountability chain**
-  Role has AI participants but no defined accountability to a human.
-  *Recommendation:* Set accountability_to to a human-occupied role.
+  Role has AI participants but answers to no steward.
+  *Recommendation:* Set accountability_to to the steward role whose function it works under.
 
 ## HIGH (2)
 **Missing steward role: integrity**
@@ -100,18 +100,18 @@ cell = Cell(
     name="My First Cell",
     roles=[
         Role(
-            name="Director",
+            name="Clarity Steward",
             steward_role=StewardRole.CLARITY,
             participant_type=ParticipantType.HUMAN,
         ),
         Role(
             name="Assistant",
             participant_type=ParticipantType.AI,
-            accountability_to="Director",
+            accountability_to="Clarity Steward",
         ),
     ],
     participants=[
-        Participant(id="alice", name="Alice", participant_type=ParticipantType.HUMAN, role="Director"),
+        Participant(id="alice", name="Alice", participant_type=ParticipantType.HUMAN, role="Clarity Steward"),
         Participant(id="bot-1", name="AssistantBot", participant_type=ParticipantType.AI, role="Assistant"),
     ],
 )
@@ -127,15 +127,19 @@ print(report.to_markdown())
 CellOS implements the **Cell Framework** — an organizational design methodology where:
 
 - **Cells** are small (2-15 participant) autonomous units
-- Every cell has **5 steward roles**: Clarity, Execution, Narrative, Access, Integrity
+- Every cell has **5 steward roles**: Clarity, Execution, Narrative, Access, Integrity, **each held by a human**
+- The stewards are **peers**: no steward reports to another, and there is no boss node above them
+- AI agents work **beneath a steward**, and every agent's accountability chain ends at that human
+- The structure is **fractal**: an agent team can mirror the five functions one level down, as roles that answer to the steward above
 - Human and AI participants have **explicit scope boundaries**
-- **Accountability chains** ensure every AI action has a human accountable
 - **Handoff protocols** define how work transitions between participants
 - **Escalation rules** define when AI should defer to human judgment
 
+`Cell.validate_completeness()` and the diagnostic both check the steward rules. To opt a cell out of the completeness check, set `config.require_human_stewards: false`.
+
 ## Examples
 
-See the `examples/` directory for real-world cell definitions, including Resomnium's own operational cell.
+See the `examples/` directory for a starter template and a reference cell in the shape Resomnium designs: five human stewards with AI agents beneath them.
 
 ## License
 

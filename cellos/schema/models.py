@@ -26,15 +26,17 @@ class ParticipantType(str, Enum):
 class StewardRole(str, Enum):
     """The five fixed steward roles in the Cell Framework.
 
-    Every cell has these five roles filled. Additional domain-specific
-    roles can be added via the Role model.
+    Every cell has these five roles, each held by a human. The stewards are
+    peers: none reports to another. AI agents work beneath a steward and never
+    hold a steward role. Additional domain-specific roles can be added via the
+    Role model.
     """
 
-    CLARITY = "clarity"  # Strategic direction, priorities
-    EXECUTION = "execution"  # Operational coordination, delivery
-    NARRATIVE = "narrative"  # Content, messaging, distribution
-    ACCESS = "access"  # Relationships, partnerships
-    INTEGRITY = "integrity"  # Financial discipline, accountability
+    CLARITY = "clarity"  # The question: direction, scope, what done means
+    EXECUTION = "execution"  # The doing: delivery, quality, tooling, automation calls
+    NARRATIVE = "narrative"  # The story: what is said, where, in whose voice
+    ACCESS = "access"  # The doors: customers, partners, capital
+    INTEGRITY = "integrity"  # Trust: governance, incentives, conflict, accountability
 
     @classmethod
     def _missing_(cls, value: object) -> StewardRole | None:
@@ -204,6 +206,13 @@ class CellConfig(BaseModel):
         default=True,
         description="Whether every role must have explicit scope definitions",
     )
+    require_human_stewards: bool = Field(
+        default=True,
+        description=(
+            "Whether every steward role must be held by a human, with no reporting line "
+            "between stewards, and every AI role must answer to a steward"
+        ),
+    )
 
 
 class Cell(BaseModel):
@@ -264,6 +273,29 @@ class Cell(BaseModel):
                 return role
         return None
 
+    def is_human_held(self, role: Role) -> bool:
+        """Whether a role is declared human and every participant filling it is human."""
+        return role.participant_type == ParticipantType.HUMAN and all(
+            p.participant_type == ParticipantType.HUMAN
+            for p in self.get_participants_for_role(role.name)
+        )
+
+    def get_accountable_steward(self, role: Role) -> Role | None:
+        """Follow accountability_to from a role until it reaches a steward role.
+
+        Agents may answer to other agents, so the chain can pass through
+        several roles. Returns None if the chain breaks, loops, or ends
+        without reaching a steward.
+        """
+        seen = {role.name}
+        current = self.get_role(role.accountability_to) if role.accountability_to else None
+        while current is not None and current.name not in seen:
+            if current.steward_role:
+                return current
+            seen.add(current.name)
+            current = self.get_role(current.accountability_to) if current.accountability_to else None
+        return None
+
     def validate_completeness(self) -> list[str]:
         """Check if the cell has all required steward roles filled.
 
@@ -308,6 +340,23 @@ class Cell(BaseModel):
                         f"Role '{role.name}' accountable to non-existent role "
                         f"'{role.accountability_to}'"
                     )
+
+        # Check stewards are human peers and every agent answers to one of them
+        if self.config.require_human_stewards:
+            for role in self.roles:
+                if role.steward_role:
+                    if not self.is_human_held(role):
+                        issues.append(
+                            f"Steward role '{role.name}' ({role.steward_role.value}) "
+                            f"must be held by a human"
+                        )
+                    if role.accountability_to:
+                        issues.append(
+                            f"Steward role '{role.name}' is accountable to "
+                            f"'{role.accountability_to}'; stewards are peers"
+                        )
+                elif not self.is_human_held(role) and not self.get_accountable_steward(role):
+                    issues.append(f"Role '{role.name}' does not answer to a steward")
 
         # Check handoff protocol references
         for hp in self.handoff_protocols:
